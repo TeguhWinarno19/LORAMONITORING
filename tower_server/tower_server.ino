@@ -36,7 +36,7 @@ char Str1[15];
 String myString;
 int i;
 String dt[10];
-boolean parsing=false;
+boolean parsing = false;
 
 void setup() {
   // START aktivas Oled
@@ -90,7 +90,7 @@ void loop() {
   display.setFont(ArialMT_Plain_10);
   display.drawString(0, 45, "RSSI : " + String(LoRa.packetRssi()));
   display.display();
-  
+
 }
 
 void onReceive(int packetSize) {
@@ -113,13 +113,13 @@ void onReceive(int packetSize) {
   display.clear();
   myString = String(Str1);
   Serial.println(myString);
-  if (myString.length()>0)
+  if (myString.length() > 0)
   {
     int separatorIndex = myString.indexOf('|');
     // Memisahkan variabel induk dan nilai berdasarkan posisi pemisah
     String induk = myString.substring(0, separatorIndex);
     String nilai_str = myString.substring(separatorIndex + 1);
-    
+
     // Konversi nilai dari string ke integer
     int nilai = nilai_str.toInt();
     // Menampilkan hasil
