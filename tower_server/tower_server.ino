@@ -1,11 +1,9 @@
-//modified lora library by Sandeep Mistry for TTGO ESP32 Lora
-// lora receiverCallBack 915Mhz V2.1-1.6 with OLED
-// Modified by HwThinker
-
+//Load Library
 #include <SPI.h>
 #include <LoRa.h>
-#include <Wire.h>  // Only needed for Arduino 1.6.5 and earlier
-#include "SSD1306Wire.h" // legacy include: `#include "SSD1306.h"`
+#include <Wire.h>
+#include "SSD1306Wire.h"
+
 
 #ifdef ARDUINO_SAMD_MKRWAN1300
 #error "This example is not compatible with the Arduino MKR WAN 1300 board!"
@@ -27,9 +25,14 @@
 
 #define LED_BUILTIN 25
 
+String induk;
+long nilai;
+
 // Initialize the OLED display using Wire library
 SSD1306Wire  display(0x3c, OLED_SDA, OLED_SCL); // OLED_SDA=4, OLED_SCL=15
 
+
+//Receive Package Variable
 int RxDataRSSI = 0;
 char Str1[15];
 //parsingData
@@ -46,13 +49,19 @@ void setup() {
   delay(50);
   digitalWrite(OLED_RST, HIGH); // while OLED is running, must set GPIO16 in high、
 
-  // Initialising the UI will init the display too.
+  // INISIALISASI DISPLAY
   display.init();
   display.flipScreenVertically();
   display.setFont(ArialMT_Plain_10);
   // clear the display
   display.clear();
+  display.setFont(ArialMT_Plain_16);
+  display.drawString(0, 0, "SERVER ON");
+  display.display();
+  delay(1000);
+  display.clear();
   // aktivasi Oled END
+  
 
   Serial.begin(115200);
   while (!Serial);
@@ -71,32 +80,40 @@ void setup() {
 
   // put the radio into receive mode
   LoRa.receive();
-  display.setFont(ArialMT_Plain_24);
-  display.drawString(0, 0, "HwThinker");
-  display.display();
-  delay(1000);
-  display.clear();
+
+  File dataFile = SD.open("/SDM.csv", FILE_WRITE);
+  if (dataFile) {
+    dataFile.println("Time (ms),Counter");
+    dataFile.close();
+    Serial.println("CSV header written to SD card.");
+  } else {
+    Serial.println("Error opening data.csv");
+  }
+
 }
 
 void loop() {
   // do nothing
   display.setFont(ArialMT_Plain_10);
-  display.drawString(0, 0, "Nabil still learning");
-
+  display.drawString(0, 0, "LORA IOT SERVER");
   display.setFont(ArialMT_Plain_10);
-  display.drawString(0, 26, "rx Data:" + String(Str1));
-
+  display.drawString(0, 15, "rx Data:" + String(Str1));
   display.setTextAlignment(TEXT_ALIGN_LEFT);
   display.setFont(ArialMT_Plain_10);
-  display.drawString(0, 45, "RSSI : " + String(LoRa.packetRssi()));
+  display.drawString(0, 30, "RSSI : " + String(LoRa.packetRssi()));
   display.display();
-
+  // Menampilkan hasil
+  Serial.print("Variabel Induk: ");
+  Serial.println(induk);
+  Serial.print("Nilai: ");
+  Serial.println(nilai);
+  delay(500);
 }
 
 void onReceive(int packetSize) {
   // received a packet
   display.clear();
-  Serial.print("Received packet '");
+  Serial.println("Received packet '");
   memset(Str1, 0, sizeof(Str1));
   // read packet
   for (int i = 0; i < packetSize; i++) {
@@ -117,15 +134,10 @@ void onReceive(int packetSize) {
   {
     int separatorIndex = myString.indexOf('|');
     // Memisahkan variabel induk dan nilai berdasarkan posisi pemisah
-    String induk = myString.substring(0, separatorIndex);
+    induk = myString.substring(0, separatorIndex);
     String nilai_str = myString.substring(separatorIndex + 1);
 
     // Konversi nilai dari string ke integer
-    int nilai = nilai_str.toInt();
-    // Menampilkan hasil
-    Serial.print("Variabel Induk: ");
-    Serial.println(induk);
-    Serial.print("Nilai: ");
-    Serial.println(nilai);
+    nilai = nilai_str.toInt();
   }
 }
