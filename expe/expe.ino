@@ -18,7 +18,7 @@
 #define LORA_SS 18    // GPIO18 -- lora CS
 #define LORA_RST 12   // GPIO14 -- RESET (If Lora does not work, replace it with GPIO14)
 #define LORA_DI0 26   // GPIO26 -- IRQ(Interrupt Request)
-#define LORA_BAND 915E6
+#define LORA_BAND 923E6
 #define Node  "SDM"
 
 // Definisi pin untuk OLED
@@ -33,6 +33,7 @@ int state = 0;
 
 // Definisi pi  untuk Input
 #define INPUT_PIN 4
+int sensor;
 int stack = 0;
 
 // inisialisasi OLED display menggunakan Wire library
@@ -58,6 +59,11 @@ void setup() {
   display.flipScreenVertically();
   display.setFont(ArialMT_Plain_10);
   display.clear();
+  //line 1
+  display.setFont(ArialMT_Plain_10);
+  display.drawString(0, 0, "Lora Node!");
+  display.display();
+  delay(1000);
 
   // Nyakalan Serial Monitor
   Serial.begin(115200);
@@ -104,7 +110,7 @@ void setup() {
 
 void loop() {  
   //Baca data sensor
-  int sensor = digitalRead(INPUT_PIN);
+  sensor = digitalRead(INPUT_PIN);
   if (sensor == 0 && stack == 0){
     stack = 1;
   }
@@ -114,7 +120,32 @@ void loop() {
     perbaruiScreen();
     kirimData();
     simpanData();
+    digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
    }
+   delay(100);
+}
+
+void perbaruiScreen(){
+  // untuk Update tampilan OLED
+  display.clear();
+  //line 1
+  display.setFont(ArialMT_Plain_10);
+  display.drawString(0, 0, "IOT LORA32 PROJECT");
+  display.display();
+  //line 2
+  display.setFont(ArialMT_Plain_10);
+  display.drawString(0, 5, "___________________________________________");
+  display.display();
+  //line 3
+  display.setFont(ArialMT_Plain_10);
+  display.drawString(0, 18, "Node Identity  : " + String(Node));
+  display.display();
+  //line 4
+  display.setTextAlignment(TEXT_ALIGN_LEFT);
+  display.setFont(ArialMT_Plain_10);
+  display.drawString(0, 30, "data packet    : " + String(counter));
+  display.display();
+  //tampilan Serial Monitor
    Serial.println("------------------------");
    Serial.print("nilai sensor   : ");
    Serial.println(sensor);
@@ -122,26 +153,6 @@ void loop() {
    Serial.println(stack);
    Serial.print("Sending packet : ");
    Serial.println(counter);
-   delay(1000);
-   digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
-   display.clear();
-}
-
-void perbaruiScreen(){
-  // untuk Update tampilan OLED
-  //line 1
-  display.setFont(ArialMT_Plain_10);
-  display.drawString(0, 1, "IOT LORA32 PROJECT");
-  display.display();
-    //line 2
-  display.setFont(ArialMT_Plain_10);
-  display.drawString(0, 15, "Node Identity  : " + String(Node));
-  display.display();
-    //line3
-  display.setTextAlignment(TEXT_ALIGN_LEFT);
-  display.setFont(ArialMT_Plain_10);
-  display.drawString(0, 29, "data packet    : " + String(counter));
-  display.display();
 }
 
 void kirimData(){

@@ -4,6 +4,8 @@
 #include <LoRa.h>
 #include <Wire.h>
 #include "SSD1306Wire.h"
+#include <WiFi.h>
+#include <PubSubClient.h>
 
 // Definisi pin untuk LoRa
 #define LORA_SCK 5    // GPIO5  -- lora SCK
@@ -13,6 +15,7 @@
 #define LORA_RST 12   // GPIO12 -- RESET
 #define LORA_DI0 26   // GPIO26 -- IRQ(Interrupt Request)
 #define LORA_BAND 923E6
+#define Node  "SDM"
 
 // Definisi pin untuk OLED
 #define OLED_SDA 21
@@ -51,7 +54,75 @@ long SDM;
 #define SD_SCK  14   // SCK pin untuk SD card module
 #define SD_MISO 2    // MISO pin untuk SD card module
 
+// Update these with values suitable for your network.
+const char* ssid = "JONO";
+const char* password = "susukuda";
+const char* mqtt_server = "broker.mqtt-dashboard.com";
+
+WiFiClient espClient;
+PubSubClient client(espClient);
+unsigned long lastMsg = 0;
+
+void setup_wifi() {
+
+  delay(10);
+  // We start by connecting to a WiFi network
+  Serial.println();
+  Serial.print("Connecting to ");
+  Serial.println(ssid);
+
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(ssid, password);
+
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+
+  randomSeed(micros());
+
+  Serial.println("");
+  Serial.println("WiFi connected");
+  Serial.println("IP address: ");
+  Serial.println(WiFi.localIP());
+}
+
+void callback(char* topic, byte* payload, unsigned int length) {
+  Serial.print("Message arrived [");
+  Serial.print(topic);
+  Serial.print("] ");
+  for (int i = 0; i < length; i++) {
+    Serial.print((char)payload[i]);
+  }
+  Serial.println();
+}
+
+void reconnect() {
+  // Loop until we're reconnected
+  while (!client.connected()) {
+    Serial.print("Attempting MQTT connection...");
+    // Create a random client ID
+    String clientId = "ESP32Client-";
+    clientId += String(random(0xffff), HEX);
+    
+    // Attempt to connect
+    if (client.connect(clientId.c_str())) {
+      Serial.println("connected");
+      client.subscribe("/esp32/mqtt/in");
+    } else {
+      Serial.print("failed, rc=");
+      Serial.print(client.state());
+      Serial.println(" try again in 5 seconds");
+      // Wait 5 seconds before retrying
+      delay(5000);
+    }
+  }
+}
 void setup() {
+  Serial.begin(115200);
+  setup_wifi();
+  client.setServer(mqtt_server, 1883);
+  client.setCallback(callback);
   // START aktivas Oled
   pinMode(LED_BUILTIN, OUTPUT);
   pinMode(OLED_RST, OUTPUT);
@@ -109,6 +180,21 @@ void setup() {
 }
 
 void loop() {
+  if (!client.connected()) {
+    reconnect();
+  }
+  client.loop();
+  long now = millis();
+  if (now - lastMsg > 10000) {
+    
+    float datasdm = SDM;
+    char SDMString[100];
+    dtostrf(datasdm, 1, 2, SDMString);
+    Serial.print("Gedung SDM: ");
+    Serial.println(SDMString);
+    client.publish("/esp32-mqtt/PeruriGSDM", SDMString);
+    lastMsg = now;
+  }
   perbaruiScreen();
   // Menampilkan hasil
   Serial.print("Variabel Induk: ");
@@ -123,7 +209,6 @@ void loop() {
   }
   delay(500);
 }
-
 void onReceive(int packetSize) {
   // Received a packet
   display.clear();
@@ -178,6 +263,7 @@ void perbaruiScreen() {
 }
 
 void simpanSDMData() {
+  SDM = nilai;
   // Rekam data kedalam file excel "SDM.csv"
   File dataFile = SD.open("/SDM.csv", FILE_APPEND);
   if (dataFile) {

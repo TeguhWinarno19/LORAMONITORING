@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ESP32 Data Monitor</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+      }
+      .container {
+        max-width: 600px;
+        margin: auto;
+        padding: 20px;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h2>ESP32 Data Monitor</h2>
+      <p>Perkumpulan</p>
+      <div id="dataContainer">
+        <!-- Data will be populated here -->
+      </div>
+    </div>
+    <script>
+      // Function to load MQTT library from CDN or fallback to local
+      function loadMqttLibrary(callback) {
+        // Try loading from CDN
+        const script = document.createElement("script");
+        script.onload = callback;
+        script.src =
+          "https://cdnjs.cloudflare.com/ajax/libs/mqtt/4.2.7/mqtt.min.js";
+        document.head.appendChild(script);
+      }
+
+      // Callback function to initialize MQTT connection
+      function initMqtt() {
+        // Connect to MQTT broker
+        const client = mqtt.connect(
+          "wss://broker.mqtt-dashboard.com:8000/mqtt"
+        );
+
+        // When connected
+        client.on("connect", function () {
+          console.log("MQTT Connected");
+          // Subscribe to specific topics
+          client.subscribe("/esp32-mqtt/PeruriGSDM");
+          client.subscribe("/esp32-mqtt/PeruriGMAKO");
+          client.subscribe("/esp32-mqtt/PeruriGLINIA");
+          client.subscribe("/esp32-mqtt/PeruriGLINIB");
+        });
+
+        // When a message is received
+        client.on("message", function (topic, payload) {
+          updateData(topic, payload.toString());
+        });
+
+        // Function to update UI with received data
+        function updateData(topic, payload) {
+          const dataContainer = document.getElementById("dataContainer");
+
+          // Create a new h3 element for each message received
+          const h3Element = document.createElement("h3");
+          h3Element.textContent = `Topic: ${topic}, Payload: ${payload}`;
+          dataContainer.appendChild(h3Element); // Append new h3 element
+        }
+      }
+
+      // Load MQTT library and initialize
+      loadMqttLibrary(initMqtt);
+    </script>
+  </body>
+</html>

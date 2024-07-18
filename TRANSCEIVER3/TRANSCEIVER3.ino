@@ -44,7 +44,12 @@ String dt[10];
 boolean parsing = false;
 int simpanOn = 0;
 long SDM;
-
+long LINIA;
+long LINIB;
+long MAKO;
+long lastMsg= 0;
+long lastMsg1=0;
+int grafik = 0;
 // Definisi pin untuk antarmuka SPI
 #define SD_CS   13   // CS pin untuk SD card module
 #define SD_MOSI 15   // MOSI pin untuk SD card module
@@ -67,17 +72,22 @@ void setup() {
   display.clear();
   display.setFont(ArialMT_Plain_16);
   display.drawString(0, 0, "SERVER ON");
+  display.setFont(ArialMT_Plain_10);
+  display.drawString(0,15, "> Config Screeen");
   display.display();
   delay(1000);
-  display.clear();
+  display.drawString(0,15, "> Config Screeen ok!");
+  display.display();
+  delay(1000);
   // aktivasi Oled END
-
   // Nyalakan serial monitor
   Serial.begin(115200);
   while (!Serial);
-
   // Inisialisasi SPI untuk SD card
   sdSPI.begin(SD_SCK, SD_MISO, SD_MOSI, SD_CS);
+  delay(500);
+  display.drawString(0,25, "> Config LoRa Module");
+  display.display();
 
   // Inisialisasi SPI untuk LoRa
   loraSPI.begin(LORA_SCK, LORA_MISO, LORA_MOSI, LORA_SS);
@@ -92,20 +102,49 @@ void setup() {
   }
   Serial.println("LoRa Initial OK!");
 
+   LoRa.setTxPower(14);  // Contoh: set daya transmisi ke 14 dBm
+   
+  display.drawString(0,25, "> Config LoRa Module ok!");
+  display.display();
+  display.drawString(0,35, "> Config Storage");
+  display.display();
+  delay(500);
   // Inisialisasi SD card
   Serial.print("Initializing SD card...");
   if (!SD.begin(SD_CS, sdSPI)) {
     Serial.println("Initialization of SD card failed!");
+    display.drawString(0,35, "> Config Storage failed!");
+    display.display();
     while (1);
   }
   Serial.println("SD card initialized.");
-
+  display.drawString(0,35, "> Config Storage ok!");
+  display.display();
+  delay(1000);
   // Register the receive callback
   LoRa.onReceive(onReceive);
 
   // Put the radio into receive mode
   LoRa.receive();
+  display.drawString(0,45, "> Read Data from SD card!");
+  display.display();
+  delay(1000);
   SDM = bacaSDMDariSD();
+  display.drawString(0,55, "> *");
+  display.display();
+  delay(1000);
+  LINIA = bacaLINIADariSD();
+  display.drawString(0,55, "> ***");
+  display.display();
+  delay(1000);
+  LINIB = bacaLINIBDariSD();
+  display.drawString(0,55, "> ******");
+  display.display();
+  delay(1000);
+  MAKO = bacaMAKODariSD();
+  display.drawString(0,55, "> ************");
+  display.display();
+  delay(1000);
 }
 
 void loop() {
@@ -117,10 +156,37 @@ void loop() {
   Serial.println(nilai);
   if (simpanOn == 1) {
     if (induk == "SDM") {
-      simpanSDMData();
+      simpanData();
       SDM = nilai;
     }
+    if (induk == "LINIA") {
+      simpanData();
+      LINIA = nilai;
+    }
+    if (induk == "LINIB"){
+      simpanData();
+      LINIB = nilai;  
+    }
+    if (induk == "MAKO"){
+      simpanData();
+      MAKO = nilai;
+    }
   }
+  long now = millis();
+  if (now - lastMsg > 3000){
+    lastMsg = now;
+    grafik++;
+    if (grafik == 2){
+      grafik = 0;
+    }
+  }
+  long now1 = millis();
+  if (now1 - lastMsg1 > 15000){
+    lastMsg1 = now1;
+    kirimData();
+    Serial.println("Data send!");
+  }
+  
   delay(500);
 }
 
@@ -160,26 +226,39 @@ void perbaruiScreen() {
   display.clear();
   // Line 1
   display.setFont(ArialMT_Plain_10);
-  display.drawString(0, 0, "LORA IOT SERVER");
+  display.drawString(0, 0, "LORA IOT CONCENTRATOR!");
   // Line 2
   display.setFont(ArialMT_Plain_10);
   display.drawString(0, 3, "___________________________________________");
   // Line 3
   display.setFont(ArialMT_Plain_10);
-  display.drawString(0, 18, "Receive Data : " + String(Str1));
+  display.drawString(0, 15, "Data In : " + String(Str1));
   display.setTextAlignment(TEXT_ALIGN_LEFT);
   // Line 4
   display.setFont(ArialMT_Plain_10);
-  display.drawString(0, 30, "RSSI: " + String(LoRa.packetRssi()) + " | SNR:" + String(LoRa.packetSnr()));
+  display.drawString(0, 27, "RSSI: " + String(LoRa.packetRssi()) + " | SNR:" + String(LoRa.packetSnr()));
   // Line 6
-  display.setFont(ArialMT_Plain_10);
-  display.drawString(0, 43, "SDM          : " + String(SDM));
+  if (grafik == 0){
+    display.setFont(ArialMT_Plain_10);
+    display.drawString(0, 40, "SDM          : " + String(SDM));
+    // Line 6
+    display.setFont(ArialMT_Plain_10);
+    display.drawString(0, 50, "MAKO         : " + String(MAKO));
+    }
+  if (grafik == 1){
+    display.setFont(ArialMT_Plain_10);
+    display.drawString(0, 40, "LINIA        : " + String(LINIA));
+    // Line 6
+    display.setFont(ArialMT_Plain_10);
+    display.drawString(0, 50, "LINIB        : " + String(LINIB));
+    }
+  
   display.display();
 }
 
-void simpanSDMData() {
+void simpanData() {
   // Rekam data kedalam file excel "SDM.csv"
-  File dataFile = SD.open("/SDM.csv", FILE_APPEND);
+  File dataFile = SD.open("/"+ String(induk)+ ".csv", FILE_APPEND);
   if (dataFile) {
     dataFile.println(nilai);
     dataFile.close();
@@ -190,7 +269,7 @@ void simpanSDMData() {
   simpanOn = 0;
 }
 
-int bacaSDMDariSD() {
+long bacaSDMDariSD() {
   int lastCounter = 0;
   File dataFile = SD.open("/SDM.csv", FILE_READ);
   if (dataFile) {
@@ -207,3 +286,61 @@ int bacaSDMDariSD() {
   }
   return lastCounter;
 }
+long bacaLINIADariSD() {
+  int lastCounter = 0;
+  File dataFile = SD.open("/LINIA.csv", FILE_READ);
+  if (dataFile) {
+    while (dataFile.available()) {
+      String line = dataFile.readStringUntil('\n');
+      if (line.length() > 0) {
+        lastCounter = line.toInt();
+      }
+    }
+    dataFile.close();
+    Serial.println("Last counter read from SD card: " + String(lastCounter));
+  } else {
+    Serial.println("Error opening LINIA.csv to read last counter.");
+  }
+  return lastCounter;
+}
+long bacaLINIBDariSD() {
+  int lastCounter = 0;
+  File dataFile = SD.open("/LINIB.csv", FILE_READ);
+  if (dataFile) {
+    while (dataFile.available()) {
+      String line = dataFile.readStringUntil('\n');
+      if (line.length() > 0) {
+        lastCounter = line.toInt();
+      }
+    }
+    dataFile.close();
+    Serial.println("Last counter read from SD card: " + String(lastCounter));
+  } else {
+    Serial.println("Error opening LINIB.csv to read last counter.");
+  }
+  return lastCounter;
+}
+long bacaMAKODariSD() {
+  int lastCounter = 0;
+  File dataFile = SD.open("/MAKO.csv", FILE_READ);
+  if (dataFile) {
+    while (dataFile.available()) {
+      String line = dataFile.readStringUntil('\n');
+      if (line.length() > 0) {
+        lastCounter = line.toInt();
+      }
+    }
+    dataFile.close();
+    Serial.println("Last counter read from SD card: " + String(lastCounter));
+  } else {
+    Serial.println("Error opening MAKO.csv to read last counter.");
+  }
+  return lastCounter;
+}
+
+void kirimData(){
+  LoRa.beginPacket();
+  LoRa.print("Concentrator|"+String(SDM)+"|"+String(MAKO)+"|"+String(LINIA)+"|"+String(LINIB));
+  LoRa.endPacket();
+  LoRa.receive();
+  }
